@@ -1,38 +1,45 @@
-from flask import Flask, request
-import telegram
-from telegram.ext import Dispatcher, MessageHandler, Filters, CallbackContext
+# <C:\Users\dell\Desktop\DiduBotReady\main.py>
 
-# === Config ===
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, CallbackContext
+import logging
+import os
+
+# Enable logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+
+# Your bot token
 TOKEN = "7192091134:AAHXzC7xKOQ5JFHHED3iZskAtg9bjAZNjFs"
-WEBHOOK_URL = f"https://aafnoor.onrender.com/{TOKEN}"
 
-# === Init ===
-app = Flask(__name__)
-bot = telegram.Bot(token=TOKEN)
-dispatcher = Dispatcher(bot=bot, update_queue=None, use_context=True)
+# Webhook URL
+WEBHOOK_URL = "https://aafnoor.onrender.com/"
 
-# === Message Handler ===
-def handle_message(update: telegram.Update, context: CallbackContext):
-    chat_id = update.effective_chat.id
-    text = update.message.text
-    context.bot.send_message(chat_id=chat_id, text=f"Didu: You said — {text}")
+# /start command
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("Hello from Didu 💌\nI'm always here for you, Aafiya 💖")
 
-dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+# Optional /help command
+def help_command(update: Update, context: CallbackContext):
+    update.message.reply_text("You can talk to me using /start. More features coming soon!")
 
-# === Routes ===
-@app.route("/")
-def index():
-    return "DiduBot Webhook Active!"
+def main():
+    # Use Updater for webhook
+    updater = Updater(token=TOKEN, use_context=True)
+    dispatcher = updater.dispatcher
 
-@app.route(f"/{TOKEN}", methods=["POST"])
-def webhook():
-    update = telegram.Update.de_json(request.get_json(force=True), bot)
-    dispatcher.process_update(update)
-    return "ok"
+    # Register commands
+    dispatcher.add_handler(CommandHandler("start", start))
+    dispatcher.add_handler(CommandHandler("help", help_command))
 
-# === Start ===
-if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 5000))
-    bot.set_webhook(WEBHOOK_URL)
-    app.run(host="0.0.0.0", port=port)
+    # Start webhook
+    PORT = int(os.environ.get('PORT', '8443'))
+    updater.start_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TOKEN,
+        webhook_url=WEBHOOK_URL + TOKEN
+    )
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
