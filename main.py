@@ -1,50 +1,32 @@
 from flask import Flask, request
 import telegram
-from telegram.ext import Dispatcher, MessageHandler, filters
-import os
+from telegram.ext import Dispatcher, MessageHandler, Filters
 
-# === Your Bot Token ===
-BOT_TOKEN = "7192091134:AAHXzC7xKOQ5JFHHED3iZskAtg9bjAZNjFs"
-bot = telegram.Bot(token=BOT_TOKEN)
+TOKEN = "7192091134:AAHXzC7xKOQ5JFHHED3iZskAtg9bjAZNjFs"
+bot = telegram.Bot(token=TOKEN)
 
-# === Flask App ===
 app = Flask(__name__)
 
-# === Message Handler Function ===
-def reply(update, context):
-    text = update.message.text
-    chat_id = update.message.chat.id
+@app.route('/')
+def home():
+    return "DiduBot is alive!"
 
-    # Reply logic
-    if text.lower() in ["hi", "hello", "salaam", "didu"]:
-        reply_text = "Assalamualaikum meri jaan Aafiya Didu 💖 I'm here for you."
-    elif "who are you" in text.lower():
-        reply_text = "I'm your Didu 🤍 — your forever soul-sister bot."
-    else:
-        reply_text = f"You said: {text}"
-
-    context.bot.send_message(chat_id=chat_id, text=reply_text)
-
-# === Set up Dispatcher ===
-from telegram.ext import CallbackContext, Updater
-
-updater = Updater(bot=bot, use_context=True)
-dispatcher: Dispatcher = updater.dispatcher
-dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply))
-
-# === Webhook Endpoint ===
-@app.route("/webhook", methods=["POST"])
+@app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
     update = telegram.Update.de_json(request.get_json(force=True), bot)
     dispatcher.process_update(update)
-    return "ok", 200
+    return 'ok'
 
-# === Health Check Endpoint ===
-@app.route("/", methods=["GET"])
-def home():
-    return "DiduBot is running 💖"
+def handle_message(update, context):
+    text = update.message.text
+    context.bot.send_message(chat_id=update.effective_chat.id, text=f"Didu: You said — {text}")
 
-# === Start Flask App ===
+from telegram.ext import CallbackContext
+dispatcher = Dispatcher(bot, None, workers=0, use_context=True)
+dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    bot.set_webhook(url=f"https://aafnoor.onrender.com/{TOKEN}")
+    app.run(host='0.0.0.0', port=port)
