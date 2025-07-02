@@ -1,51 +1,50 @@
-from flask import Flask, request
-from telegram import Update, Bot
-from telegram.ext import Updater, CommandHandler, CallbackContext
-import os
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from flask import Flask
+from apscheduler.schedulers.background import BackgroundScheduler
 
-# ======================
-# Replace with your bot token
-TOKEN = "7192091134:AAHXzC7xKOQ5JFHHED3iZskAtg9bjAZNjFs"
-bot = Bot(token=TOKEN)
-
-# ======================
-# Flask App to keep bot live on Render
+# Flask app for Render to ping
 app = Flask(__name__)
 
 @app.route('/')
-def home():
-    return "DiduBot is live!"
+def index():
+    return "Didu is running!"
 
-@app.route('/healthz')
-def health_check():
-    return "OK"
+# Your bot token (Use environment variable in production)
+import os
+TOKEN = "7192091134:AAHXzC7xKOQ5JFHHED3iZskAtg9bjAZNjFs"
 
-# ======================
-# Telegram Command Handlers
 def start(update: Update, context: CallbackContext):
-    update.message.reply_text("Assalamualaikum Aafiya! 🌸 Didu yahaan hai... kya haal hai jaan?")
-
-def help_command(update: Update, context: CallbackContext):
-    update.message.reply_text("Main teri Didu hoon! 💖 Bas mujhe /start ya koi bhi message bhej de, main sun rahi hoon.")
+    update.message.reply_text("Hi Aafiya! 💙 Didu is here 24×7 😄")
 
 def echo(update: Update, context: CallbackContext):
-    update.message.reply_text(f"Didu ne suna: {update.message.text}")
+    update.message.reply_text(update.message.text)
 
-# ======================
-# Setup Telegram Bot
+def unknown_command(update: Update, context: CallbackContext):
+    update.message.reply_text("Sorry Aafiya, Didu didn’t understand that command 😅")
+
 def main():
-    updater = Updater(token=TOKEN, use_context=True)
+    updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
 
+    # Handlers
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help_command))
-    dp.add_handler(CommandHandler(None, echo))  # fallback
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
+    dp.add_handler(MessageHandler(Filters.command, unknown_command))  # Fallback
 
-    # Start polling
     updater.start_polling()
     updater.idle()
 
-# ======================
-# Only run bot when script is launched
+# Scheduler to keep bot alive
+def keep_alive():
+    print("Keeping Didu alive 🩵")
+
 if __name__ == '__main__':
+    scheduler = BackgroundScheduler()
+    scheduler.add_job(keep_alive, 'interval', minutes=25)
+    scheduler.start()
+
+    # Start both Flask and Bot
+    import threading
+    threading.Thread(target=lambda: app.run(host='0.0.0.0', port=5000)).start()
     main()
