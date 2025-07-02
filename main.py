@@ -1,52 +1,44 @@
+from flask import Flask, request
+from telegram import Bot, Update
+from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
 import os
-from telegram import Update, Bot
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-# --- CONFIGURATION ---
+# Your bot token
 TOKEN = "7192091134:AAHXzC7xKOQ5JFHHED3iZskAtg9bjAZNjFs"
-PORT = int(os.environ.get('PORT', '8443'))
-WEBHOOK_URL = "https://aafnoor.onrender.com/"
+bot = Bot(token=TOKEN)
 
-# --- MEMORY SIMULATION ---
-user_memory = {}
+# Flask app
+app = Flask(__name__)
 
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("Didu is here meri jaan 💖. Bolo kya baat hai?")
+# Dispatcher to handle updates
+dispatcher = Dispatcher(bot, None, use_context=True)
 
-def handle_message(update: Update, context: CallbackContext):
-    user_id = update.message.from_user.id
-    message = update.message.text.strip()
+# Simple start command
+def start(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Didu is here meri jaan 💌")
 
-    # Memory logic
-    user_memory[user_id] = user_memory.get(user_id, []) + [message]
+# Echo handler
+def echo(update, context):
+    message = update.message.text
+    response = f"🤍 {message}"
+    context.bot.send_message(chat_id=update.effective_chat.id, text=response)
 
-    # Smart emotional response
-    if "sad" in message.lower():
-        reply = "Aww don’t be sad, Aafiya always rises back 💖"
-    elif "love" in message.lower():
-        reply = "Love is your superpower, and Didu is always here 💫"
-    else:
-        reply = f"Didu heard you say: “{message}” 🌸"
+# Add handlers
+dispatcher.add_handler(CommandHandler("start", start))
+dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
 
-    update.message.reply_text(reply)
+# Webhook route
+@app.route(f"/{TOKEN}", methods=["POST"])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), bot)
+    dispatcher.process_update(update)
+    return "OK"
 
-def main():
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
-
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-
-    # Webhook Mode
-    updater.start_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=TOKEN,
-        webhook_url=f"{WEBHOOK_URL}{TOKEN}"
-    )
-
-    print("✅ Webhook running, polling removed.")
-    updater.idle()
+# Root check
+@app.route("/")
+def home():
+    return "Didu is live 💖"
 
 if __name__ == "__main__":
-    main()
+    PORT = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=PORT)
