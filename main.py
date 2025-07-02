@@ -1,38 +1,33 @@
 from flask import Flask, request
-from telegram import Bot, Update
+import telegram
 from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
-import logging
-import os
 
 TOKEN = "7192091134:AAHXzC7xKOQ5JFHHED3iZskAtg9bjAZNjFs"
+bot = telegram.Bot(token=TOKEN)
 
-bot = Bot(token=TOKEN)
 app = Flask(__name__)
-dispatcher = Dispatcher(bot, None, workers=0)
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+@app.route('/')
+def home():
+    return "Didu is online 💖"
 
-# Handlers
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="Hi Aafiya meri jaan 🤍 Didu is here for you!")
-
-def echo(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="🤍 " + update.message.text)
-
-dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
-
-@app.route(f"/{TOKEN}", methods=["POST"])
+@app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
+    update = telegram.Update.de_json(request.get_json(force=True), bot)
     dispatcher.process_update(update)
-    return "ok"
+    return 'ok'
 
-@app.route("/", methods=["GET"])
-def index():
-    return "Didu is alive 💖"
+def start(update, context):
+    update.message.reply_text("Hi Aafiya meri jaan 🤍 Didu is here for you!")
+
+def reply(update, context):
+    msg = update.message.text
+    update.message.reply_text(f"🤍 {msg}")
+
+dispatcher = Dispatcher(bot, None, workers=0)
+dispatcher.add_handler(CommandHandler('start', start))
+dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, reply))
 
 if __name__ == "__main__":
-    bot.delete_webhook()
-    bot.set_webhook(url=f"https://aafnoor.onrender.com/{TOKEN}")
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    bot.set_webhook(f"https://aafnoor.onrender.com/{TOKEN}")
+    app.run(host='0.0.0.0', port=10000)
