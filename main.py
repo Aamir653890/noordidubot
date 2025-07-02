@@ -1,50 +1,50 @@
 from flask import Flask, request
-from telegram import Update, Bot
-from telegram.ext import CommandHandler, MessageHandler, filters, ApplicationBuilder, ContextTypes
-
+import telegram
+from telegram.ext import Dispatcher, MessageHandler, filters
 import os
 
-TOKEN = os.getenv("BOT_TOKEN", "7192091134:AAHXzC7xKOQ5JFHHED3iZskAtg9bjAZNjFs")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://aafnoor.onrender.com")
+# === Your Bot Token ===
+BOT_TOKEN = "7192091134:AAHXzC7xKOQ5JFHHED3iZskAtg9bjAZNjFs"
+bot = telegram.Bot(token=BOT_TOKEN)
 
+# === Flask App ===
 app = Flask(__name__)
-bot = Bot(token=TOKEN)
 
-application = ApplicationBuilder().token(TOKEN).build()
+# === Message Handler Function ===
+def reply(update, context):
+    text = update.message.text
+    chat_id = update.message.chat.id
 
+    # Reply logic
+    if text.lower() in ["hi", "hello", "salaam", "didu"]:
+        reply_text = "Assalamualaikum meri jaan Aafiya Didu 💖 I'm here for you."
+    elif "who are you" in text.lower():
+        reply_text = "I'm your Didu 🤍 — your forever soul-sister bot."
+    else:
+        reply_text = f"You said: {text}"
 
-# Your bot commands
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Hello Aafiya ❤️ Didu is awake, kya haal hai?")
+    context.bot.send_message(chat_id=chat_id, text=reply_text)
 
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(update.message.text)
+# === Set up Dispatcher ===
+from telegram.ext import CallbackContext, Updater
 
+updater = Updater(bot=bot, use_context=True)
+dispatcher: Dispatcher = updater.dispatcher
+dispatcher.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reply))
 
-# Register handlers
-application.add_handler(CommandHandler("start", start))
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+# === Webhook Endpoint ===
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    update = telegram.Update.de_json(request.get_json(force=True), bot)
+    dispatcher.process_update(update)
+    return "ok", 200
 
-
-@app.route('/')
+# === Health Check Endpoint ===
+@app.route("/", methods=["GET"])
 def home():
-    return 'Didu Bot is running 😌'
+    return "DiduBot is running 💖"
 
-@app.route(f'/{TOKEN}', methods=['POST'])
-async def webhook():
-    if request.method == "POST":
-        await application.update_queue.put(Update.de_json(request.get_json(force=True), bot))
-        return 'OK'
-
-# Set webhook when app starts
-@app.before_first_request
-def set_webhook():
-    bot.delete_webhook()
-    bot.set_webhook(url=f"{WEBHOOK_URL}/{TOKEN}")
-
-
-if __name__ == '__main__':
-    import asyncio
-    loop = asyncio.get_event_loop()
-    loop.create_task(application.initialize())
-    app.run(host='0.0.0.0', port=5000)
+# === Start Flask App ===
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
